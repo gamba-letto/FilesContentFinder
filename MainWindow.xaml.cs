@@ -12,7 +12,7 @@ using System.IO;
 using System.ComponentModel;
 using System.Collections.ObjectModel;
 using FilesContentFinder.Models;
-using static System.Net.WebRequestMethods;
+using System.Diagnostics;
 
 namespace FilesContentFinder
 {
@@ -41,6 +41,24 @@ namespace FilesContentFinder
             }
         }
 
+        private string _parolaChiave = string.Empty;
+        public string ParolaChiave
+        {
+            get => _parolaChiave;
+            set
+            {
+                _parolaChiave = value;
+                OnPropertyChanged(nameof(ParolaChiave));
+            }
+        }
+
+        private int _fileAnalizzati;
+        public int FileAnalizzati
+        {
+            get => _fileAnalizzati;
+            set { _fileAnalizzati = value; OnPropertyChanged(nameof(FileAnalizzati)); }
+        }
+
         private int _numeroFile;
         public int NumeroFile
         {
@@ -52,8 +70,21 @@ namespace FilesContentFinder
             }
         }
 
+        private bool _caricamento;
+        public bool Caricamento
+        {
+            get => _caricamento;
+            set
+            {
+                _caricamento = value;
+                OnPropertyChanged(nameof(Caricamento));
+            }
+        }
 
         public ObservableCollection<FileDettaglio> ListaFile { get; set; } = new ObservableCollection<FileDettaglio>();
+        public ObservableCollection<FileDettaglio> FileScansionati { get; set; } = new ObservableCollection<FileDettaglio>();
+
+        private CancellationTokenSource? _cts;
 
         public MainWindow()
         {
@@ -78,12 +109,17 @@ namespace FilesContentFinder
             dialog.Dispose();
         }
 
-        private void BtnRicerca_Click(object sender, RoutedEventArgs e)
+        private void BtnControllaCartella_Click(object sender, RoutedEventArgs e)
+        {
+            CercaFileNellaCartellaSelezionata();
+        }
+
+        private bool CercaFileNellaCartellaSelezionata()
         {
             if (!Directory.Exists(CartellaSelezionata))
             {
-                System.Windows.Forms.MessageBox.Show("Cartella non trovata", "Error",  MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
+                System.Windows.Forms.MessageBox.Show("Cartella non trovata", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
             }
 
             List<FileInfo> files;
@@ -109,6 +145,8 @@ namespace FilesContentFinder
             }
 
             NumeroFile = ListaFile.Count;
+
+            return true;
         }
 
         private List<FileInfo> CercaFileNelleSottoCartelle(string cartellaMadre)
@@ -137,6 +175,91 @@ namespace FilesContentFinder
 
             DirectoryInfo dirInfo = new DirectoryInfo(cartellaMadre);
             return dirInfo.GetFiles().ToList();
+        }
+
+        private async void BtnCerca_Click(object sender, RoutedEventArgs e)
+        {
+            if (ListaFile.Count == 0)
+            {
+                if (!CercaFileNellaCartellaSelezionata()) return;
+            }
+
+            _cts = new CancellationTokenSource();
+            CancellationToken cancToken = _cts.Token;
+
+            Caricamento = true;
+            FileAnalizzati = 0;
+
+            FileScansionati.Clear();
+
+            try
+            {
+                await Parallel.ForEachAsync(ListaFile, new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = 2,
+                    CancellationToken = cancToken
+                },
+                async (file, ct) =>
+                {
+                    // Controllo centrale annullamento o interruzione logica
+                    if (ct.IsCancellationRequested)
+                        return;
+
+                    if (file.Estensione == ".txt")
+                    {
+                        try
+                        {
+                            string contenuto = await File.ReadAllTextAsync(file.PercorsoCompleto, ct);
+
+                            if (contenuto.Contains(ParolaChiave, StringComparison.OrdinalIgnoreCase))
+                            {
+                                // Dispatcher necessario per modifiche alla UI-bound collection
+                                await Dispatcher.InvokeAsync(() =>
+                                {
+                                    FileScansionati.Add(file);
+                                });
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            // Opzionalmente logga l'errore
+                        }
+                    }
+
+                    // Aggiorna il progresso su thread UI
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        FileAnalizzati++;
+                    });
+                });
+            }
+            catch (OperationCanceledException)
+            {
+                // Annullamento esplicito
+            }
+            finally
+            {
+                Caricamento = false;
+            }
+        }
+
+        private void GrigliaRisultati_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (!(GrigliaRisultati.SelectedItem is FileDettaglio fileSelezionato)) return;
+
+            if (File.Exists(fileSelezionato.PercorsoCompleto))
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = fileSelezionato.PercorsoCompleto,
+                    UseShellExecute = true // 👉 Necessario per aprire con l'app di default
+                });
+            }
+        }
+
+        private void BtnAnnulla_Click(object sender, RoutedEventArgs e)
+        {
+            _cts?.Cancel();
         }
     }
 }
