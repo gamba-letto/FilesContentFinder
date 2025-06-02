@@ -14,11 +14,12 @@
         Background="{DynamicResource MaterialDesignPaper}"
         FontFamily="{DynamicResource MaterialDesignFont}"
         Style="{StaticResource MaterialDesignWindow}"
-        Title="Files' Content Finder" Height="450" Width="800"
+        Title="Files' Content Finder" Height="550" Width="900"
         Loaded="Window_Loaded" WindowStartupLocation="CenterScreen">
     
     <Grid Margin="16">
         <Grid.RowDefinitions>
+            <RowDefinition Height="auto"/>
             <RowDefinition Height="auto"/>
             <RowDefinition Height="auto"/>
             <RowDefinition/>
@@ -31,49 +32,63 @@
                 <ColumnDefinition/>
                 <ColumnDefinition Width="auto"/>
             </Grid.ColumnDefinitions>
-            <TextBox x:Name="TbCartellaRicerca" Text="{Binding CartellaSelezionata, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" 
-                     MouseDoubleClick="TbCartellaRicerca_MouseDoubleClick" Margin="0 0 8 0" materialDesign:HintAssist.Hint="Cartella"/>
-
-            <Button x:Name="BtnControllaCartella" Click="BtnControllaCartella_Click" Content="{materialDesign:PackIcon Kind=Refresh}" ToolTip="Refresh file's list" Grid.Column="1" Margin="0 0 8 0"
-                    Style="{StaticResource MaterialDesignIconButton}" Height="35" Width="35"/>
-
-            <TextBox x:Name="TbParolaChiave" Grid.Column="2" Text="{Binding ParolaChiave, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Parola chiave" Margin="0 0 8 0"/>
-
-            <Button x:Name="BtnCerca" Click="BtnCerca_Click" Content="Cerca" Grid.Column="3"
-                    Style="{StaticResource MaterialDesignRaisedButton}"/>
-        </Grid>
-
-        <WrapPanel Grid.Row="1" Margin="0 4 0 0">
-            <CheckBox x:Name="ChkAncheSottoCartelle" Content="Anche sotto-cartelle" VerticalAlignment="Center"
-                      Style="{StaticResource MaterialDesignCheckBox}"/>
-        </WrapPanel>
-
-        <Grid Grid.Row="2" Margin="0 8 0 0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition/>
-                <ColumnDefinition/>
-            </Grid.ColumnDefinitions>
-            <DataGrid x:Name="GrigliaFile" Margin="0 0 4 0" ItemsSource="{Binding ListaFile}" IsReadOnly="True"
-                      AutoGenerateColumns="True" Style="{StaticResource MaterialDesignDataGrid}">
-            </DataGrid>
-
-            <DataGrid x:Name="GrigliaRisultati" Grid.Column="1" Margin="4 0 0 0" MouseDoubleClick="GrigliaRisultati_MouseDoubleClick"
-                      ItemsSource="{Binding FileScansionati}" IsReadOnly="True"
-                      AutoGenerateColumns="True" Style="{StaticResource MaterialDesignDataGrid}">
-            </DataGrid>
-        </Grid>
-
-        <StackPanel Grid.Row="3">
-            <TextBlock Text="{Binding ListaFile.Count, StringFormat='File trovati: {0}'}" FontSize="11" FontWeight="Bold" Margin="0 8 0 0"/>
-
-            <Grid Visibility="{Binding Caricamento, Converter={StaticResource BooleanToVisibilityConverter}}" >
+            <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition/>
                     <ColumnDefinition Width="auto"/>
                 </Grid.ColumnDefinitions>
-                <ProgressBar x:Name="ProgressBarRicerca" Minimum="0" Maximum="{Binding NumeroFile}" Value="{Binding FileAnalizzati}" Margin="0 0 8 0"/>
+                <TextBox x:Name="TbStartingFolder" Text="{Binding StartingFolder, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True"
+                         MouseDoubleClick="TbStartingFolder_MouseDoubleClick" Margin="0 0 8 0" materialDesign:HintAssist.Hint="Starting Folder"/>
 
-                <Button x:Name="BtnAnnulla" Click="BtnAnnulla_Click" Content="Annulla" Grid.Column="1"
+                <ComboBox x:Name="CmbFileTypes" Grid.Column="1" ItemsSource="{Binding FileTypes}" Text="{Binding SelectedFileType, UpdateSourceTrigger=PropertyChanged}" 
+                          materialDesign:HintAssist.Hint="File Type" VerticalAlignment="Bottom" Margin="0 0 8 0"/>
+            </Grid>
+
+            <!--<Button x:Name="BtnControllaCartella" Click="BtnControllaCartella_Click" Content="{materialDesign:PackIcon Kind=Refresh}" ToolTip="Refresh file's list" Grid.Column="1" Margin="0 0 8 0"
+                    Style="{StaticResource MaterialDesignIconButton}" Height="35" Width="35"/>-->
+
+            <TextBox x:Name="TbDestinationFolder" Grid.Column="2" Text="{Binding DestinationFolder, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" 
+                     MouseDoubleClick="TbDestinationFolder_MouseDoubleClick" Margin="8 0" materialDesign:HintAssist.Hint="Destination Folder"/>
+
+            <Button x:Name="BtnFind" Click="BtnFind_Click" Content="Find" Grid.Column="3"
+                    Style="{StaticResource MaterialDesignRaisedButton}"/>
+        </Grid>
+
+        <WrapPanel Grid.Row="1" Margin="0 4 0 0">
+            <CheckBox x:Name="ChkScanSubFoldersToo" Content="Scan sub-folders too" VerticalAlignment="Center"
+                      Style="{StaticResource MaterialDesignCheckBox}"/>
+        </WrapPanel>
+
+        <TextBox x:Name="TbKeyWord" Grid.Row="2" Text="{Binding KeyWord, UpdateSourceTrigger=PropertyChanged}" 
+                 materialDesign:HintAssist.Hint="Word to search" Margin="0 8 0 0" 
+                 Visibility="{Binding Text, ElementName=CmbFileTypes, Converter={StaticResource ValueEqualsToVisibilityConverter}, ConverterParameter=.txt}"/>
+
+        <Grid Grid.Row="3" Margin="0 8 0 0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+            <DataGrid x:Name="GrigliaFile" Margin="0 0 4 0" ItemsSource="{Binding FileList}" IsReadOnly="True"
+                      AutoGenerateColumns="True" Style="{StaticResource MaterialDesignDataGrid}">
+            </DataGrid>
+
+            <DataGrid x:Name="ResultGrid" Grid.Column="1" Margin="4 0 0 0" MouseDoubleClick="ResultGrid_MouseDoubleClick"
+                      ItemsSource="{Binding ScannedFiles}" IsReadOnly="True"
+                      AutoGenerateColumns="True" Style="{StaticResource MaterialDesignDataGrid}">
+            </DataGrid>
+        </Grid>
+
+        <StackPanel Grid.Row="99">
+            <TextBlock Text="{Binding FileList.Count, StringFormat='Files found: {0}'}" FontSize="11" FontWeight="Bold" Margin="0 8 0 0"/>
+
+            <Grid Visibility="{Binding Loading, Converter={StaticResource BooleanToVisibilityConverter}}" >
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="auto"/>
+                </Grid.ColumnDefinitions>
+                <ProgressBar x:Name="ProgressBarRicerca" Minimum="0" Maximum="{Binding NumberOfFiles}" Value="{Binding NumberOfScannedFiles}" Margin="0 0 8 0"/>
+
+                <Button x:Name="BtnCancel" Click="BtnCancel_Click" Content="Cancel" Grid.Column="1"
                         Style="{StaticResource MaterialDesignFlatButton}"/>
             </Grid>
         </StackPanel>

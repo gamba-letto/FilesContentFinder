@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:local="clr-namespace:FilesContentFinder"
+             xmlns:models="clr-namespace:FilesContentFinder.Models"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
@@ -24,8 +25,9 @@
                 <Setter Property="FontSize" Value="12"/>
                 <Setter Property="IsReadOnly" Value="True"/>
             </Style>
-            
+
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <models:ValueEqualsToVisibilityConverter x:Key="ValueEqualsToVisibilityConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
